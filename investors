@@ -1,0 +1,38 @@
+Select 	FundingRound_Investors.Investor_name,
+	(Select funding_type
+	from 	datastore_mirror_153.New_Company
+	where 	FundingRound_Investors.investor_id = datastore_mirror_153.New_Company.id) as investor_type,
+	count(distinct datastore_mirror_153.New_Funding_Round.id) Rounds_number,
+	count(distinct datastore_mirror_153.New_Company.id) Startups_number,
+	group_concat(distinct datastore_mirror_153.New_Company.name) Startup_names
+from
+	(Select KnownInvestors.origin_entity_id as round_id,
+	KnownInvestors.known_investors as investor_id,
+	Companies.name as investor_name
+	from 	(datastore_mirror_153.New_Funding_Round_known_investors KnownInvestors
+	left join datastore_mirror_153.New_Company Companies on
+		((KnownInvestors.known_investors = Companies.id)))
+union all
+	Select
+	datastore_mirror_153.New_Funding_Round_unknown_investors.origin_entity_id as round_id, NULL as investor_id, datastore_mirror_153.New_Funding_Round_unknown_investors.unknown_investors as investor_name
+	from datastore_mirror_153.New_Funding_Round_unknown_investors) as FundingRound_Investors
+join datastore_mirror_153.New_Funding_Round on
+	FundingRound_Investors.round_id = datastore_mirror_153.New_Funding_Round.id
+join datastore_mirror_153.New_Company on
+	(datastore_mirror_153.New_Funding_Round.startup = datastore_mirror_153.New_Company.id
+	and datastore_mirror_153.New_Company.type = 'New_Startup')
+where 	year(datastore_mirror_153.New_Funding_Round.date) >= 2014
+	and datastore_mirror_153.New_Funding_Round.type_ IN ('A Round',
+	'Angel',
+	'B Round',
+	'C Round',
+	'D Round',
+	'E Round',
+	'F Round',
+	'G Round',
+	'Pre-Seed',
+	'Private_equity',
+	'Seed',
+	'Undisclosed Round')
+group by  1, 2
+order by Rounds_number desc;
